@@ -1,0 +1,59 @@
+name: Black Swan Radar — Auto Update
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install requests yfinance pandas numpy scikit-learn
+
+      - name: Phase 1 — Fetch market data
+        run: python pipeline/fetch_data.py
+        continue-on-error: false
+
+      - name: Phase 2 — Isolation Forest scoring
+        run: python pipeline/analyze.py
+
+      - name: Phase 3 — Dead Cat Bounce detection
+        run: python pipeline/dead_cat.py
+
+      - name: Commit updated data files
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/crypto.json \
+                  data/macro.json \
+                  data/sentiment.json \
+                  data/anomalies.json \
+                  data/dead_cats.json \
+                  data/manifest.json
+
+          if git diff --cached --quiet; then
+            echo "No data changes — skipping commit"
+          else
+            TIMESTAMP=$(date -u "+%Y-%m-%d %H:%M UTC")
+            git commit -m "🤖 data: auto-update ${TIMESTAMP}"
+            git push
+          fi
