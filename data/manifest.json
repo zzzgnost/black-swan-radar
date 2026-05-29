@@ -1,0 +1,7 @@
+{
+  "last_updated": "not-yet-generated",
+  "crypto_count": 0,
+  "macro_count": 0,
+  "fear_greed": {},
+  "files": ["crypto.json", "macro.json", "sentiment.json"]
+}
